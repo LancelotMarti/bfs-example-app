@@ -1,8 +1,16 @@
+# k-means only works with numerical variables,
+# so don't give the user the option to select
+# a categorical variable
+vars <- setdiff(names(iris), "Species")
 
-ui <- shiny::fluidPage(
-shiny::tags$h1("Earthquakes"),
-# Slider to control the minimum magnitude
-shiny::sliderInput(inputId = "magSlider", label = "Minimum magnitude:", min = 0, max = 10, value = 0, step = 0.1),
-# Map output
-leaflet::leafletOutput(outputId = "map")
+pageWithSidebar(
+  headerPanel('Iris k-means clustering'),
+  sidebarPanel(
+    selectInput('xcol', 'X Variable', vars),
+    selectInput('ycol', 'Y Variable', vars, selected = vars[[2]]),
+    numericInput('clusters', 'Cluster count', 3, min = 1, max = 9)
+  ),
+  mainPanel(
+    plotOutput('plot1')
+  )
 )

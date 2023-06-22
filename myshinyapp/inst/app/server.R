@@ -1,41 +1,23 @@
+function(input, output, session) {
 
-server <- function(input, output) {
+  # Combine the selected variables into a new data frame
+  selectedData <- reactive({
+    iris[, c(input$xcol, input$ycol)]
+  })
 
-  data <- reactive({
-    # Connect to the DB
-    conn <- DBI::dbConnect(
-      RPostgres::Postgres(),
-      dbname = Sys.getenv("POSTGRESQL_DB_NAME"),
-      host = Sys.getenv("POSTGRESQL_DB_HOST"),
-      port = Sys.getenv("POSTGRESQL_DB_PORT"),
-      user = Sys.getenv("POSTGRESQL_DB_USER"),
-      password = Sys.getenv("POSTGRESQL_DB_PASSWORD")
-    )
-    
-    # Get the data
-    quakes <- DBI::dbGetQuery(conn, glue::glue("SELECT * FROM quakes WHERE mag >= {input$magSlider}"))
-    quakes <- data.frame(quakes)
-    
-    # Disconnect from the DB
-    DBI::dbDisconnect(conn)
-    
-    return(quakes)
+  clusters <- reactive({
+    kmeans(selectedData(), input$clusters)
   })
-  
-  # Base map
-  output$map <- leaflet::renderLeaflet({
-    mymap <- leaflet::leaflet()
-    mymap <- leaflet::addTiles(mymap)
-    mymap <- leaflet::setView(mymap, lng=178,lat=-23,zoom=4)
-    mymap <- leaflet::addProviderTiles(mymap, leaflet::providers$Esri.WorldStreetMap)
+
+  output$plot1 <- renderPlot({
+    palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
+      "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
+
+    par(mar = c(5.1, 4.1, 0, 1))
+    plot(selectedData(),
+         col = clusters()$cluster,
+         pch = 20, cex = 3)
+    points(clusters()$centers, pch = 4, cex = 4, lwd = 4)
   })
-  
-  # Update markers
-  observe({
-    proxy <- leaflet::leafletProxy("map")
-    proxy <- leaflet::clearMarkers(proxy)
-    if (nrow(data()) > 0) {
-    proxy <- leaflet::addMarkers(proxy, data=data(), ~long, ~lat, label = ~mag)  
-    }
-    })
+
 }
